@@ -1,36 +1,27 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>AniCape | Minecraft Animated Cape Maker</title>
+    <title>Native Community Cape Contest · Cape Studio</title>
 
     <!-- SEO -->
-    <meta name="description"
-        content="Create animated capes for Minecraft such as Wynntils and MinecraftCapes. An online tool for designing custom animated capes. | 為 Minecraft (如 Wynntils、MinecraftCapes) 製作動畫披風。一個用於設計自定義動畫披風的在線工具。">
+    <meta name="description" content="Design a Native community cape. Export the original texture and a real 3D model GIF, then submit to Discord.">
     <meta name="keywords"
         content="minecraft cape editor, animated cape maker, wynntils cape editor, minecraftcapes editor, animated cape, custom cape, minecraft, 動畫披風, 披風編輯器, wynntils披風, minecraftcapes">
 
-    <!-- Hreflang -->
-    <link rel="alternate" hreflang="en" href="https://anicape.wryy.org/">
-    <link rel="alternate" hreflang="zh" href="https://anicape.wryy.org/">
-
     <!-- Open Graph -->
-    <meta property="og:title" content="AniCape | Animated Cape Maker">
-    <meta property="og:description"
-        content="Create animated capes for Minecraft such as Wynntils and MinecraftCapes. An online tool for designing custom animated capes. | 為 Minecraft (如 Wynntils、MinecraftCapes) 製作動畫披風。一個用於設計自定義動畫披風的在線工具。">
+    <meta property="og:title" content="Native Community Cape Contest">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://anicape.wryy.org/">
-    <meta property="og:image" content="https://anicape.wryy.org/assets/og-image.png">
 
     <!-- Stylesheets -->
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="libs/driver.css">
+    <link rel="stylesheet" href="libs/driver.css"><link rel="stylesheet" href="css/contest.css">
 
     <!-- PWA -->
-    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
-    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="assets/native-mark.svg">
+    <meta name="robots" content="noindex,nofollow">
     <meta name="theme-color" content="#ffffff">
 
     <!-- Libraries (must load before app modules) -->
@@ -52,14 +43,7 @@
         })();
     </script>
 
-    <!-- Service Worker registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
-            });
-        }
-    </script>
+
 </head>
 
 <body id="app-body">
@@ -69,10 +53,7 @@
          ============================================================ -->
     <header>
         <div class="header-brand">
-            <img src="assets/logo_light.svg" alt="Logo" class="logo light-logo">
-            <img src="assets/logo_dark.svg" alt="Logo" class="logo dark-logo">
-            <h1>AniCape</h1>
-            <span class="header-subtitle desktop-only">Animated Cape Maker</span>
+            <a class="native-brand" href="https://playnative.net"><img src="assets/native-mark.svg" class="logo" alt=""><strong>NATIVE</strong></a><span class="studio-label">CAPE STUDIO</span>
         </div>
         <div class="toolbar">
             <button class="icon-btn" id="themeToggle" data-i18n-title="themeToggle">
@@ -105,6 +86,7 @@
         </div>
     </header>
 
+    <section class="contest-banner"><div><p class="eyebrow">● &nbsp; LIMITED-TIME COMMUNITY EVENT</p><h1>Native Community <span>Cape Contest</span></h1><p>Make it yours. Design a cape, bring it to life, and share it with Native.</p></div><div class="event-actions"><button class="primary" id="contestUpload">Add your artwork ↗</button><button id="contestGuide">How to enter →</button></div></section><div id="contestNotice" role="status" hidden></div>
     <!-- ============================================================
          MAIN LAYOUT
          ============================================================ -->
@@ -297,8 +279,8 @@
 
                 <label data-i18n="target_mod" class="mt-10">Target Mod</label>
                 <select id="targetModSelect">
-                    <option value="wynntils">Wynntils (PNG Strip)</option>
-                    <option value="minecraftcapes">MinecraftCapes (Animated GIF)</option>
+                    <option value="wynntils">Native (PNG / animated strip)</option>
+
                 </select>
 
                 <div id="resampleToggleWrapper" class="resample-wrapper" style="display:none;">
@@ -602,7 +584,7 @@
     <script src="src/events/wheel.js"></script>
     <script src="src/events/drop.js"></script>
     <script src="src/events/controls.js"></script>
-    <script src="src/events/bootstrap.js"></script>
+    <script src="src/events/bootstrap.js"></script><script src="src/contest/event.js"></script>
 
     <script src="src/logic/project.js"></script>
     <script src="src/logic/tutorial.js"></script>

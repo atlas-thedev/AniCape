@@ -1,5 +1,5 @@
 {
-    "export": "Export",
+    "export": "Export entry",
     "themeToggle": "Theme",
     "menu": "Menu",
     "settings": "Template",
@@ -39,7 +39,7 @@
     "confirm_page_leave": "You have unsaved changes. Are you sure you want to leave?",
     "opacity_transparency_tip": "⚠ Semi-transparency is NOT supported by GIF or MC engine. Ensure an opaque layer is underneath.",
     "size_preset": "Preset Size",
-    "target_mod": "Target Mod",
+    "target_mod": "Export format",
     "custom_upload": "Custom Upload...",
     "show_bg": "Show Template BG",
     "show_grid": "Show Pixel Grid",

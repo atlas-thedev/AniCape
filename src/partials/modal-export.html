@@ -1,72 +1,7 @@
-<!-- ============================================================
-     EXPORT MODAL
-     ============================================================ -->
-<div id="exportModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 data-i18n="export"></h2>
-            <button id="exportCloseBtn" class="modal-close-btn">✕</button>
-        </div>
-        <div class="modal-body">
-            <div class="export-preview-container" id="exportPreviewContainer">
-                <div id="export_preview_hint" class="export-preview-hint"
-                    data-i18n="export_preview_placeholder"></div>
-                <canvas id="skin_container" style="cursor: pointer;"></canvas>
-            </div>
-            <div class="cape-controls hidden">
-                <button id="btn_cape" class="active" data-i18n="cape"></button>
-                <button id="btn_elytra" data-i18n="elytra"></button>
-                <button id="btn_open_blob" data-i18n="open_blob"></button>
-            </div>
-            <div id="oxipngLevelWrapper" class="form-group">
-                <label for="oxipngLevel" data-i18n="compress_level"></label>
-                <div class="range-slider">
-                    <input type="range" id="oxipngLevel" min="0" max="6" value="2" step="1">
-                    <span id="oxipngLevelValue">2</span>
-                </div>
-                <small>(<span id="oxipngDesc"></span>)</small>
-            </div>
-
-            <div id="oxipngToggleWrapper" class="form-group-stack">
-                <div class="form-group-inline">
-                    <input type="checkbox" id="oxipngToggle" checked>
-                    <label for="oxipngToggle" style="margin:0; cursor:pointer;" data-i18n="use_oxipng"></label>
-                </div>
-                <small class="text-sub indent" data-i18n="oxipng_desc"></small>
-            </div>
-
-            <div id="upngToggleWrapper" class="form-group-stack">
-                <div class="form-group-inline">
-                    <input type="checkbox" id="upngToggle">
-                    <label for="upngToggle" style="margin:0; cursor:pointer;" data-i18n="use_upng"></label>
-                </div>
-                <small class="text-sub indent" data-i18n="upng_desc"></small>
-            </div>
-
-            <div id="gifQualityWrapper" class="form-group gif-quality-wrapper">
-                <label for="gifQualitySlider"><span data-i18n="gif_quality_label"></span> <small>(1~20)</small></label>
-                <div class="range-slider">
-                    <input type="range" id="gifQualitySlider" min="1" max="20" value="10" step="1">
-                    <span id="gifQualityValue">10</span>
-                </div>
-                <small class="text-sub" data-i18n="gif_quality_desc"></small>
-            </div>
-
-            <div class="export-stats">
-                <div><span data-i18n="export_original_size"></span>: <span id="originalSizeText">--</span></div>
-                <div id="optimizedSizeDiv" style="display:none;"><span data-i18n="export_optimized_size"></span>: <span id="optimizedSizeText">--</span></div>
-                <div id="savingsDiv" style="display:none;"><span data-i18n="export_savings"></span>: <span id="savingsText">--</span></div>
-            </div>
-
-            <div id="exportProcessing" style="display:none;">
-                <div class="spinner"></div>
-                <span id="processingText"></span>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button id="exportCancelBtn" data-i18n="cancel"></button>
-            <button id="exportGenerateBtn" class="primary" data-i18n="export"></button>
-            <button id="exportDownloadBtn" data-i18n="download" disabled></button>
-        </div>
-    </div>
-</div>
+<div id="exportModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="entryExportTitle"><div class="modal-content contest-export">
+<div class="modal-header"><div><p class="eyebrow">YOUR CONTEST ENTRY</p><h2 id="entryExportTitle">Ready for its close-up.</h2></div><button id="exportCloseBtn" aria-label="Close export">×</button></div>
+<div class="modal-body export-grid"><section><div class="export-preview-container"><canvas id="skin_container" aria-label="Interactive real 3D Minecraft model wearing your cape"></canvas><p id="export_preview_hint">Generate your entry to preview your cape on the model.</p></div><p class="preview-caption">REAL 3D PREVIEW · Drag to rotate</p></section><section class="export-options">
+<label for="entryName">Entry name</label><input id="entryName" maxlength="64" value="My Native cape"><label for="entryFps">Animated cape speed</label><select id="entryFps"><option value="5">5 FPS</option><option value="10" selected>10 FPS</option><option value="15">15 FPS</option><option value="20">20 FPS</option><option value="25">25 FPS</option><option value="30">30 FPS</option></select>
+<p class="export-note">Static capes also get a moving 3D model GIF. Animated textures export as a vertical PNG strip.</p><div class="export-includes"><strong>One entry. Ready to share.</strong><ul><li>Original cape PNG or animated strip</li><li>320 × 320 real 3D model GIF</li><li>ZIP backup with frame details</li></ul></div>
+<p id="entryIdentity" class="export-note">To submit, open your personal entry link from the Native Discord bot. Downloads do not enter the contest.</p><div id="exportProcessing" hidden role="status"><progress id="exportProgress" max="100"></progress><span id="processingText"></span></div><p id="exportError" hidden role="alert"></p><p id="exportSummary" hidden role="status"></p><p id="submitStatus" role="status"></p><a id="entryMessage" hidden target="_blank" rel="noopener">View your Discord entry ↗</a><div id="individualDownloads" hidden><button id="downloadTexture">Cape PNG</button><button id="downloadPreview">3D GIF</button></div>
+</section></div><div class="modal-footer"><button id="exportCancelBtn">Back</button><button id="exportGenerateBtn" class="primary">Generate entry</button><button id="exportDownloadBtn" disabled>Download ZIP</button><button id="entrySubmit" disabled>Submit to Discord</button></div></div></div>

@@ -2,12 +2,7 @@ function initTutorial() {
     const tutorialBtn = document.getElementById('tutorialBtn');
     if (tutorialBtn) tutorialBtn.addEventListener('click', startTutorial);
 
-    if (!localStorage.getItem('cape_editor_tutorial_done')) {
-        setTimeout(() => {
-            startTutorial();
-            localStorage.setItem('cape_editor_tutorial_done', 'true');
-        }, 800);
-    }
+
 }
 
 function startTutorial() {

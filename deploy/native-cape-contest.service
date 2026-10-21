@@ -1,0 +1,18 @@
+[Unit]
+Description=Native Community Cape Contest
+After=network.target
+[Service]
+User=native-contest
+Group=native-contest
+WorkingDirectory=/var/www/native-cape-contest
+EnvironmentFile=/etc/native-cape-contest.env
+ExecStart=/usr/bin/node server/server.mjs
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/native-cape-contest
+[Install]
+WantedBy=multi-user.target

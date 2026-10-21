@@ -9,7 +9,7 @@
 function generateExportFrames() {
     if (state.layers.length === 0) return null;
 
-    const animatedLayer = state.layers.find(l => l.isAnimated && l.animationData && l.animationData.displayFrames);
+    const animatedLayer = state.layers.find(l => l.visible && l.isAnimated && l.animationData && l.animationData.displayFrames);
     let totalFrames = 1;
     if (animatedLayer) {
         totalFrames = animatedLayer.animationData.displayFrames.length;

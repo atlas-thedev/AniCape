@@ -1,5 +1,5 @@
 {
-    "export": "匯出",
+    "export": "Export entry",
     "themeToggle": "主題",
     "menu": "選單",
     "settings": "模板設定",
@@ -39,7 +39,7 @@
     "confirm_page_leave": "您還有未儲存的工作進度，確定要離開嗎？",
     "opacity_transparency_tip": "⚠ GIF 格式與 MC 引擎均不支援半透明，請確保下方有不透明圖層墊底。",
     "size_preset": "尺寸預設",
-    "target_mod": "目標模組/輸出",
+    "target_mod": "Export format",
     "custom_upload": "自訂上傳...",
     "show_bg": "顯示模板背景",
     "show_grid": "顯示像素網格",
