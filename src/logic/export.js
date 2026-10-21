@@ -1,304 +1,46 @@
-// ============================================================
-// EXPORT DIALOG & MAIN FLOW
-// ============================================================
-
-function showExportDialog() {
-    if (state.layers.length === 0) {
-        showAlert('alert_no_layers');
-        return;
-    }
-
-    const modal = document.getElementById('exportModal');
-    const exportGenerateBtn = document.getElementById('exportGenerateBtn');
-    const exportDownloadBtn = document.getElementById('exportDownloadBtn');
-    const processingDiv = document.getElementById('exportProcessing');
-    const processingText = document.getElementById('processingText');
-    const originalSizeText = document.getElementById('originalSizeText');
-    const optimizedSizeDiv = document.getElementById('optimizedSizeDiv');
-    const optimizedSizeText = document.getElementById('optimizedSizeText');
-    const savingsDiv = document.getElementById('savingsDiv');
-    const savingsText = document.getElementById('savingsText');
-    const oxipngLevelSlider = document.getElementById('oxipngLevel');
-    const oxipngLevelValue = document.getElementById('oxipngLevelValue');
-    const oxipngDesc = document.getElementById('oxipngDesc');
-    const skinCanvas = document.getElementById('skin_container');
-    const btnCape = document.getElementById('btn_cape');
-    const btnElytra = document.getElementById('btn_elytra');
-    const openBlob = document.getElementById('btn_open_blob');
-
-    let finalBlob = null;
-    let finalBlobUrl = null;
-    let capeFrames = [];
-    let backEquipmentType = 'cape';
-    let numFramesForDownloadExport = 1;
-
-    const SKIN_URL = "assets/steve.png";
-
-    // Setup initial UI states
-    modal.style.display = 'flex';
-    exportDownloadBtn.disabled = true;
-    processingDiv.style.display = 'none';
-    optimizedSizeDiv.style.display = 'none';
-    savingsDiv.style.display = 'none';
-    originalSizeText.textContent = '--';
-    
-    if (btnCape) btnCape.classList.add('active');
-    if (btnElytra) btnElytra.classList.remove('active');
-    document.getElementById('export_preview_hint').classList.remove('hidden');
-    document.querySelector('.cape-controls').classList.add('hidden');
-
-    // 1. Init 3D Preview
-    init3DPreview(skinCanvas, SKIN_URL);
-
-    // 2. Slider Labels (Oxipng & GIF)
-    const levelDescs = ['Minimal', 'Low', 'Balanced', 'Moderate', 'Thorough', 'Intense', 'Maximum'];
-    oxipngLevelSlider.oninput = () => {
-        const level = parseInt(oxipngLevelSlider.value);
-        if (oxipngLevelValue) oxipngLevelValue.textContent = level;
-        if (oxipngDesc) oxipngDesc.textContent = levelDescs[level] || 'Unknown';
-    };
-    oxipngLevelSlider.dispatchEvent(new Event('input'));
-
-    const gifQualitySlider = document.getElementById('gifQualitySlider');
-    const gifQualityValue = document.getElementById('gifQualityValue');
-    if (gifQualitySlider && gifQualityValue) {
-        gifQualitySlider.oninput = () => {
-            gifQualityValue.textContent = gifQualitySlider.value;
-        };
-        gifQualitySlider.dispatchEvent(new Event('input'));
-    }
-
-    // 3. Conditional Visibility for GIF vs PNG
-    const animatedLayer = state.layers.find(l => l.isAnimated && l.animationData && l.animationData.displayFrames);
-    const totalFrames = animatedLayer ? animatedLayer.animationData.displayFrames.length : 1;
-    const isMinecraftCapesAnimated = state.targetMod === 'minecraftcapes' && totalFrames > 1;
-
-    document.getElementById('oxipngLevelWrapper').style.display = isMinecraftCapesAnimated ? 'none' : 'block';
-    document.getElementById('oxipngToggleWrapper').style.display = isMinecraftCapesAnimated ? 'none' : 'flex';
-    document.getElementById('upngToggleWrapper').style.display = isMinecraftCapesAnimated ? 'none' : 'flex';
-    document.getElementById('gifQualityWrapper').style.display = isMinecraftCapesAnimated ? 'block' : 'none';
-
-    // 4. Equipment Type Toggle
-    if (btnCape) btnCape.onclick = () => {
-        backEquipmentType = 'cape';
-        btnCape.classList.add('active');
-        btnElytra.classList.remove('active');
-        if (capeFrames.length > 0) {
-            updatePreviewTexture(capeFrames[0], 'cape');
-            if (capeFrames.length > 1) startCapeAnimation(capeFrames, 'cape');
-        }
-    };
-    if (btnElytra) btnElytra.onclick = () => {
-        backEquipmentType = 'elytra';
-        btnElytra.classList.add('active');
-        btnCape.classList.remove('active');
-        if (capeFrames.length > 0) {
-            updatePreviewTexture(capeFrames[0], 'elytra');
-            if (capeFrames.length > 1) startCapeAnimation(capeFrames, 'elytra');
-        }
-    };
-
-    // 5. Main Generation Flow
-    exportGenerateBtn.onclick = async () => {
-        toggleGeneratingState(true);
-        processingText.textContent = 'Preparing...';
-
-        await new Promise(r => setTimeout(r, 50));
-
-        const framesArray = generateExportFrames();
-        if (!framesArray) {
-            toggleGeneratingState(false);
-            return;
-        }
-
-        numFramesForDownloadExport = framesArray.length;
-        capeFrames = framesArray;
-
-        // Build strip if not animated GIF
-        let stripCanvas = null;
-        if (state.targetMod !== 'minecraftcapes' || numFramesForDownloadExport <= 1) {
-            stripCanvas = createStripCanvas(framesArray);
-        }
-
-        const useCompression = document.getElementById('oxipngToggle').checked;
-        const level = parseInt(document.getElementById('oxipngLevel').value);
-        const useUpng = document.getElementById('upngToggle').checked;
-
-        // --- Animated GIF Path ---
-        if (state.targetMod === 'minecraftcapes' && numFramesForDownloadExport > 1) {
-            await handleAnimatedGIFExport(framesArray);
-        } 
-        // --- PNG / Strip Path ---
-        else {
-            try {
-                let originalBlob = await new Promise(r => stripCanvas.toBlob(r, 'image/png'));
-                originalSizeText.textContent = formatFileSize(originalBlob.size);
-                
-                let blobToProcess = originalBlob;
-                if (useUpng) {
-                    processingText.textContent = 'Reducing to 8-bit...';
-                    blobToProcess = await optimizeUPNG(stripCanvas);
-                }
-
-                if (useCompression) {
-                    processingText.textContent = `Compressing (Level ${level})...`;
-                    finalBlob = await optimizeOxiPNG(blobToProcess, level);
-                } else {
-                    finalBlob = blobToProcess;
-                }
-                
-                finishProcessing(finalBlob, originalBlob, useCompression);
-            } catch (err) {
-                handleExportError(err);
-            }
-        }
-    };
-
-    async function handleAnimatedGIFExport(frames) {
-        if (!window.GIF) {
-            handleExportError({ message: 'GIF encoder missing' });
-            return;
-        }
-        processingText.textContent = 'Generating GIF...';
-        
-        try {
-            const transColor = findUnusedColor(frames);
-            const gifBlob = await encodeGIF(frames, transColor);
-            finalBlob = gifBlob;
-            originalSizeText.textContent = formatFileSize(gifBlob.size);
-            finishProcessing(gifBlob, null, false);
-        } catch (err) {
-            handleExportError(err);
-        }
-    }
-
-    async function encodeGIF(frames, transColorInt) {
-        return new Promise(async (resolve, reject) => {
-            const tr = (transColorInt >> 16) & 0xFF;
-            const tg = (transColorInt >> 8) & 0xFF;
-            const tb = transColorInt & 0xFF;
-
-            const response = await fetch('./libs/gif.worker.js');
-            const workerText = await response.text();
-            const workerBlob = new Blob([workerText], { type: 'application/javascript' });
-            const workerUrl = URL.createObjectURL(workerBlob);
-
-            const quality = parseInt(document.getElementById('gifQualitySlider').value);
-            const workers = navigator.hardwareConcurrency ? Math.max(2, navigator.hardwareConcurrency - 1) : 2;
-
-            const gif = new window.GIF({
-                workers, quality,
-                width: state.width, height: state.height,
-                transparent: transColorInt,
-                workerScript: workerUrl
-            });
-
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = state.width;
-            tempCanvas.height = state.height;
-            const tempCtx = tempCanvas.getContext('2d');
-
-            frames.forEach(frame => {
-                tempCtx.clearRect(0, 0, state.width, state.height);
-                tempCtx.drawImage(frame, 0, 0);
-                const imgData = tempCtx.getImageData(0, 0, state.width, state.height);
-                const data = imgData.data;
-
-                for (let j = 0; j < data.length; j += 4) {
-                    if (data[j + 3] < 128) {
-                        data[j] = tr; data[j + 1] = tg; data[j + 2] = tb; data[j + 3] = 255;
-                    } else {
-                        data[j + 3] = 255;
-                    }
-                }
-                tempCtx.putImageData(imgData, 0, 0);
-                gif.addFrame(tempCtx.getImageData(0, 0, state.width, state.height), { delay: 100, dispose: 2 });
-            });
-
-            gif.on('finished', (blob) => {
-                URL.revokeObjectURL(workerUrl);
-                resolve(blob);
-            });
-            gif.render();
-        });
-    }
-
-    function createStripCanvas(frames) {
-        const canv = document.createElement('canvas');
-        canv.width = state.width;
-        canv.height = state.height * frames.length;
-        const ctx = canv.getContext('2d');
-        ctx.imageSmoothingEnabled = false;
-        frames.forEach((f, i) => ctx.drawImage(f, 0, i * state.height));
-        return canv;
-    }
-
-    function finishProcessing(blob, originalBlob, usedCompression) {
-        if (finalBlobUrl) URL.revokeObjectURL(finalBlobUrl);
-        finalBlobUrl = URL.createObjectURL(blob);
-
-        updatePreviewTexture(capeFrames[0], backEquipmentType);
-        if (capeFrames.length > 1) startCapeAnimation(capeFrames, backEquipmentType);
-
-        document.getElementById('export_preview_hint').classList.add('hidden');
-        const ctrl = document.querySelector('.cape-controls');
-        if (ctrl) ctrl.classList.remove('hidden');
-
-        // Show optimized stats only if we have an original to compare with (PNG path)
-        if (originalBlob) {
-            optimizedSizeText.textContent = formatFileSize(blob.size);
-            optimizedSizeDiv.style.display = 'block';
-
-            if (usedCompression && blob.size < originalBlob.size) {
-                const savings = formatFileSize(originalBlob.size - blob.size);
-                const percent = Math.round((1 - blob.size / originalBlob.size) * 100);
-                savingsText.textContent = `${savings} (${percent}%)`;
-                savingsDiv.style.display = 'block';
-            }
-        } else {
-            // GIF mode or no optimization: optimized stats stay hidden
-            optimizedSizeDiv.style.display = 'none';
-            savingsDiv.style.display = 'none';
-        }
-
-        toggleGeneratingState(false);
-        exportDownloadBtn.disabled = false;
-    }
-
-    function toggleGeneratingState(isProcessing) {
-        exportGenerateBtn.disabled = isProcessing;
-        const cancel = document.getElementById('exportCancelBtn');
-        const close = document.getElementById('exportCloseBtn');
-        if (cancel) cancel.disabled = isProcessing;
-        if (close) close.disabled = isProcessing;
-        processingDiv.style.display = isProcessing ? 'block' : 'none';
-    }
-
-    function handleExportError(err) {
-        console.error("Export failed", err);
-        processingText.textContent = 'Error: ' + err.message;
-        toggleGeneratingState(false);
-        exportDownloadBtn.disabled = true;
-    }
-
-    exportDownloadBtn.onclick = () => {
-        if (!finalBlob) return;
-        const ext = (state.targetMod === 'minecraftcapes' && numFramesForDownloadExport > 1) ? 'gif' : 'png';
-        const filename = (state.targetMod === 'minecraftcapes') ? `cape.${ext}` : 'cape_strip.png';
-        downloadBlob(finalBlob, filename);
-    };
-
-    if (openBlob) openBlob.onclick = () => {
-        if (finalBlobUrl) window.open(finalBlobUrl, '_blank');
-    };
-
-    const closeAll = () => {
-        cleanup3DPreview();
-        if (finalBlobUrl) URL.revokeObjectURL(finalBlobUrl);
-        modal.style.display = 'none';
-    };
-    const c1 = document.getElementById('exportCloseBtn');
-    const c2 = document.getElementById('exportCancelBtn');
-    if (c1) c1.onclick = closeAll;
-    if (c2) c2.onclick = closeAll;
+// Native contest extension to AniCape, copyright Terry010011, MIT.
+const NATIVE_EXPORT_LIMITS=Object.freeze({frames:240,pixels:33554432,height:32768,bytes:8*1024*1024});
+function nativeExportDescription(width,height,frames,fps){
+ if(!Number.isInteger(width)||!Number.isInteger(height)||width<64||width>2048||width!==height*2)throw Error('Use a 2:1 cape template between 64×32 and 2048×1024.');
+ if(!Number.isInteger(frames)||frames<1||frames>240||height*frames>32768||width*height*frames>33554432)throw Error('Strip too large. Use fewer frames or a smaller template (128×64 recommended).');
+ if(!Number.isFinite(fps)||fps<1||fps>30)throw Error('Choose 1–30 FPS.');
+ return {width,frameHeight:height,frames,fps:frames>1?fps:0,animated:frames>1};
+}
+function nativeCanvasBlob(canvas){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error('PNG creation failed. Try a smaller template.')),'image/png'));}
+async function createNativeModelGIF(frames,fps,onProgress){
+ if(!window.skinview3d||!window.GIF)throw Error('The 3D renderer or GIF encoder did not load. Refresh and try again.');
+ const canvas=document.createElement('canvas');let viewer,encoder,timer;
+ try{
+  viewer=new skinview3d.SkinViewer({canvas,width:320,height:320,pixelRatio:1,preserveDrawingBuffer:true});viewer.renderPaused=true;viewer.controls.enabled=false;viewer.background='#17151b';viewer.camera.position.set(18,8,-42);viewer.zoom=.85;viewer.controls.update();await viewer.loadSkin('assets/steve.png');viewer.playerObject.backEquipment='cape';
+  const duration=Math.min(4000,Math.max(2000,frames.length/fps*1000)),count=Math.round(duration/50);
+  encoder=new GIF({workers:Math.min(2,navigator.hardwareConcurrency||1),quality:8,width:320,height:320,repeat:0,workerScript:'libs/gif.worker.js'});
+  for(let i=0;i<count;i++){if(window.nativeContestClosed)throw Error('Contest closed during generation.');await viewer.loadCape(frames[Math.floor(i*50*fps/1000)%frames.length],{backEquipment:'cape'});viewer.playerObject.rotation.y=Math.sin(i/count*Math.PI*2)*.3;viewer.playerObject.cape.rotation.x=.14+Math.sin(i/count*Math.PI*2)*.05;viewer.render();encoder.addFrame(canvas,{copy:true,delay:50});onProgress(Math.round(i/count*65));if(i%4===0)await new Promise(r=>setTimeout(r,0));}
+  return await new Promise((resolve,reject)=>{timer=setTimeout(()=>{encoder.abort();reject(Error('GIF generation timed out. Please try again.'));},90000);encoder.on('progress',n=>onProgress(65+Math.round(n*35)));encoder.on('finished',resolve);encoder.on('abort',()=>reject(Error('GIF generation interrupted.')));encoder.render();});
+ }finally{clearTimeout(timer);if(encoder)for(const w of [...(encoder.activeWorkers||[]),...(encoder.freeWorkers||[])])w.terminate();viewer?.dispose();canvas.width=canvas.height=1;}
+}
+function showExportDialog(){
+ if(window.nativeContestClosed){alert('This contest is closed.');return;}if(!state.layers.some(l=>l.visible)){showAlert('alert_no_layers');return;}
+ const $=id=>document.getElementById(id),modal=$('exportModal'),generate=$('exportGenerateBtn'),download=$('exportDownloadBtn'),submit=$('entrySubmit');
+ const error=$('exportError'),summary=$('exportSummary'),processing=$('exportProcessing');let zipBlob,textureBlob,previewBlob,description,ready=false,busy=false,submitted=false,entryId=null,pollTimer=null,idkey=crypto.randomUUID();const previous=document.activeElement;
+ modal.style.display='flex';error.hidden=summary.hidden=processing.hidden=$('individualDownloads').hidden=$('entryMessage').hidden=true;$('export_preview_hint').hidden=false;$('submitStatus').textContent='';
+ const source=state.layers.find(l=>l.visible&&l.isAnimated&&l.animationData?.displayFrames),count=source?.animationData.displayFrames.length||1;$('entryFps').value='10';
+ const viewer=init3DPreview($('skin_container'),'assets/steve.png');
+ const update=()=>{generate.disabled=busy||!viewer||window.nativeContestClosed||!!entryId;download.disabled=busy||!ready;submit.disabled=busy||!ready||!window.nativeDiscordUser||window.nativeContestClosed||submitted||!!entryId;$('entryName').disabled=busy||!!entryId;$('entryFps').disabled=busy||count===1||!!entryId;$('exportCloseBtn').disabled=$('exportCancelBtn').disabled=busy;processing.hidden=!busy;};
+ $('entryIdentity').textContent=window.nativeDiscordUser?'Verified Discord account connected. Your files are uploaded only when you choose Submit to Discord.':'To submit, open your personal entry link from the Native Discord bot. Downloads do not enter the contest.';
+ if(!viewer){error.textContent='WebGL is unavailable. Enable hardware acceleration to generate the real 3D model GIF.';error.hidden=false;}update();
+ const progress=(text,n)=>{$('processingText').textContent=text;$('exportProgress').value=n;};
+ const invalidate=()=>{ready=false;zipBlob=null;idkey=crypto.randomUUID();summary.hidden=$('individualDownloads').hidden=true;update();};$('entryName').oninput=invalidate;$('entryFps').onchange=invalidate;
+ generate.onclick=async()=>{submitted=false;$('entryMessage').hidden=true;$('submitStatus').textContent='';invalidate();error.hidden=true;busy=true;update();progress('Compositing cape frames…',0);try{
+  const fps=Number($('entryFps').value);nativeExportDescription(state.width,state.height,count,fps);await new Promise(r=>setTimeout(r,30));const frames=generateExportFrames();if(!frames?.length)throw Error('Add a visible layer first.');description=nativeExportDescription(state.width,state.height,frames.length,fps);
+  const strip=document.createElement('canvas');strip.width=state.width;strip.height=state.height*frames.length;const ctx=strip.getContext('2d');if(!ctx)throw Error('Not enough graphics memory.');frames.forEach((f,i)=>ctx.drawImage(f,0,i*state.height));textureBlob=await nativeCanvasBlob(strip);strip.width=strip.height=1;if(textureBlob.size>NATIVE_EXPORT_LIMITS.bytes)throw Error('Cape PNG exceeds 8 MiB. Use fewer frames or a smaller template.');
+  window.nativeContestFPS=fps;updatePreviewTexture(frames[0],'cape');if(frames.length>1)startCapeAnimation(frames,'cape');$('export_preview_hint').hidden=true;
+  previewBlob=await createNativeModelGIF(frames,fps,n=>progress(n<65?'Rendering the real 3D model…':'Encoding model GIF…',10+Math.round(n*.8)));if(previewBlob.size>NATIVE_EXPORT_LIMITS.bytes)throw Error('Model GIF exceeds 8 MiB. Try a shorter animation.');
+  if(window.nativeContestClosed)throw Error('Contest closed during generation.');const textureName=description.animated?'cape-strip.png':'cape.png',title=$('entryName').value.trim()||'My Native cape';const zip=new JSZip();zip.file(textureName,textureBlob);zip.file('model-preview.gif',previewBlob);if(description.animated)zip.file('cape-first-frame.png',await nativeCanvasBlob(frames[0]));zip.file('entry.json',JSON.stringify({event:'native-community-cape-contest',title,...description,layout:description.animated?'vertical-strip':'single-frame',previewWidth:320,previewHeight:320,previewFps:20},null,2));zip.file('README.txt','Native Community Cape Contest\n'+title+'\n\nCape texture and real WebGL model GIF. Animated strip frames are stacked top to bottom. entry.json contains cape FPS and frame count.\nDownloading is not a submission. Use Submit to Discord with a verified Native bot entry link. A submission is confirmed only after a Discord message link appears. Most unique human thumbs-up reactions wins; ties remain ties. Final vote snapshot is collected at closure by Native.\n\nBased on AniCape by Terry010011, MIT. https://github.com/Terry010011/AniCape\nNot an official Minecraft product.\n');progress('Packing your entry…',95);zipBlob=await zip.generateAsync({type:'blob',compression:'STORE'});ready=true;summary.textContent=`${description.animated?description.frames+' frames · '+fps+' FPS':'Static cape'} · ${state.width}×${state.height} · ZIP ${formatFileSize(zipBlob.size)}`;summary.hidden=$('individualDownloads').hidden=false;
+ }catch(e){error.textContent=e.message||'Export failed';error.hidden=false;}finally{busy=false;update();}};
+ download.onclick=()=>ready&&downloadBlob(zipBlob,'native-cape-entry.zip');$('downloadTexture').onclick=()=>ready&&downloadBlob(textureBlob,description.animated?'cape-strip.png':'cape.png');$('downloadPreview').onclick=()=>ready&&downloadBlob(previewBlob,'model-preview.gif');
+ const poll=async()=>{try{const r=await fetch('/api/entries/'+entryId,{cache:'no-store'}),e=await r.json();if(!r.ok){if(r.status===401||r.status===404){localStorage.removeItem('native_pending_entry');entryId=null;update();return;}throw Error(e.error||'Unable to check submission');}if(e.status==='submitted'&&e.message_url){submitted=true;localStorage.removeItem('native_pending_entry');entryId=null;$('submitStatus').textContent='Submitted to Discord. Your entry is ready for votes.';$('entryMessage').href=e.message_url;$('entryMessage').hidden=false;update();return;}if(e.status==='failed'){$('submitStatus').textContent='This entry was not posted before the contest closed.';localStorage.removeItem('native_pending_entry');return;}$('submitStatus').textContent=e.status==='processing'?'Native bot is posting your entry…':'Queued for the Native bot. Not posted to Discord yet.';pollTimer=setTimeout(poll,5000);}catch(e){$('submitStatus').textContent=e.message+'. Reopen this dialog to resume status checking.';pollTimer=setTimeout(poll,15000);}};
+ submit.onclick=async()=>{if(!ready||!window.nativeDiscordUser||window.nativeContestClosed)return;busy=true;error.hidden=true;update();progress('Uploading entry files…',0);try{const form=new FormData();form.set('entry_name',$('entryName').value.trim()||'My Native cape');form.set('frame_count',description.frames);form.set('fps',description.fps);form.set('width',description.width);form.set('frame_height',description.frameHeight);form.set('cape_texture',textureBlob,description.animated?'cape-strip.png':'cape.png');form.set('preview_gif',previewBlob,'model-preview.gif');const r=await fetch('/api/entries',{method:'POST',headers:{'Idempotency-Key':idkey},body:form}),e=await r.json();if(!r.ok)throw Error(e.error||'Upload failed');entryId=e.entry_id;localStorage.setItem('native_pending_entry',entryId);poll();}catch(e){error.textContent=e.message;error.hidden=false;}finally{busy=false;update();}};
+ const saved=localStorage.getItem('native_pending_entry');if(saved&&window.nativeDiscordUser){entryId=saved;$('submitStatus').textContent='Checking your previous submission…';poll();update();}
+ const close=()=>{if(busy)return;clearTimeout(pollTimer);cleanup3DPreview();modal.style.display='none';document.removeEventListener('keydown',keyHandler,true);previous?.focus();};
+ const keyHandler=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();}if(e.key==='Tab'){const targets=[...modal.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]')].filter(n=>n.getClientRects().length);if(e.shiftKey&&document.activeElement===targets[0]){e.preventDefault();targets.at(-1)?.focus();}else if(!e.shiftKey&&document.activeElement===targets.at(-1)){e.preventDefault();targets[0]?.focus();}}};document.addEventListener('keydown',keyHandler,true);$('exportCloseBtn').onclick=$('exportCancelBtn').onclick=close;$('entryName').focus();
 }
